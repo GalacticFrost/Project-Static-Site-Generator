@@ -9,10 +9,10 @@ class TestTextNode(unittest.TestCase):
         node = TextNode("This is a text node", "bold")
         node2 = TextNode("This is a text node", "bold")
         node3 = TextNode("Text", "strike", None)
-        node4 = TextNode("text", "strike", None)
+        node4 = TextNode("Text", "strike", None)
         node5 = TextNode("Text","strike", None)
-        node6 = TextNode("Text ", "bold", "boot.dev")
-        node7 = TextNode("Text ", "strike", "boot.dev")
+        node6 = TextNode("Text ", " bold", "boot.dev")
+        node7 = TextNode("Text ", " bold", "boot.dev")
 
         try:
 
