@@ -23,7 +23,7 @@ class LeafNode(HTMLNode):
 
         # Check for 'img' tag to handle it separately
         if self.tag == 'img':
-            return f'<{self.tag}{props_str}>'
+            return f'<{self.tag}{props_str}></{self.tag}>'
         
         if self.tag == 'blockquote':
             return f'<{self.tag}{props_str}>\n   {self.value}\n</{self.tag}>'

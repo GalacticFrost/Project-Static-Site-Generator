@@ -27,7 +27,7 @@ class TestLeafNode(unittest.TestCase):
 
     def test_self_tag_img(self):
         node = LeafNode(tag='img', props={'src': 'url/of/image.jpeg', 'alt': 'Figure heading'})
-        self.assertEqual(node.to_html(), '<img src="url/of/image.jpeg" alt="Figure heading">')
+        self.assertEqual(node.to_html(), '<img src="url/of/image.jpeg" alt="Figure heading"></img>')
 
     def test_self_tag_blockquote(self):
         node = LeafNode(tag='blockquote', value='This is a quote')

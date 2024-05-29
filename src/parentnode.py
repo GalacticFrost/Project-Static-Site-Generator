@@ -20,4 +20,3 @@ class ParentNode(HTMLNode):
             html_text += child.to_html()
 
         return f'{html_text}</{self.tag}>'
-        
