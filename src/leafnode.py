@@ -54,8 +54,3 @@ class LeafNode(HTMLNode):
         #     return f'<{self.tag}>\n   {self.value}\n</{self.tag}>'
         
         # raise Exception('Invalid tag provided, check your spelling!')
-            
-
-
-
-        
