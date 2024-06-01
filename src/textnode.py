@@ -1,3 +1,5 @@
+import re
+
 class TextNode:
 
     def __init__ (self, text, text_type=None, url=None):
@@ -15,3 +17,53 @@ class TextNode:
     def __repr__ (self):
 
         return f"TextNode({self.text}, {self.text_type}, {self.url})"
+
+##_________Split marked down text into textnodes________##
+
+def split_nodes_delimiter(sentence, delimiters):
+    valid_delim = {
+        '`': 'code',
+        '*': 'italic',
+        '**': 'bold'
+    }
+
+    # Ensure delimiters are valid
+    for delimiter in delimiters:
+        if delimiter not in valid_delim:
+            raise Exception(f'{delimiter} is not a valid markdown syntax. Review your input.')
+
+    escaped_delimiters = sorted([re.escape(delim) for delim in delimiters], key=len, reverse=True)
+    delim_pattern = '|'.join(escaped_delimiters)
+    parts = re.split(f'({delim_pattern})', sentence)  # Split the sentence and keep delimiters
+
+    textnode_list = []
+    current_text = ""
+    current_type = "text"
+    stack = []
+
+    for part in parts:
+        if part in valid_delim.keys():  # Check against original delimiters
+            if stack and stack[-1] == part:
+                # Close the last opened delimiter
+                if current_text:
+                    textnode_list.append(TextNode(current_text, current_type))
+                    current_text = ""
+                stack.pop()
+                current_type = "text" if not stack else valid_delim[stack[-1]]
+            else:
+                if current_text:
+                    textnode_list.append(TextNode(current_text, current_type))
+                    current_text = ""
+                stack.append(part)
+                current_type = valid_delim[part]
+        else:
+            current_text += part
+
+    if current_text:
+        if stack:
+            raise Exception(f"Unmatched delimiter in text: {sentence}")
+        textnode_list.append(TextNode(current_text, "text"))
+
+    return textnode_list
+
+
