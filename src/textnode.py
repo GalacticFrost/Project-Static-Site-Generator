@@ -18,7 +18,7 @@ class TextNode:
 
         return f"TextNode({self.text}, {self.text_type}, {self.url})"
 
-##_________Split marked down text into textnodes________##
+##__________Split Markdown Text into Textnodes__________##
 
 def split_nodes_delimiter(sentence, delimiters):
     valid_delim = {
@@ -66,4 +66,23 @@ def split_nodes_delimiter(sentence, delimiters):
 
     return textnode_list
 
+##__________Extract Markdown Images__________##
+
+def extract_markdown_images(text):
+
+    pattern = r'!\[(.*?)\]\((.*?)(?:\s*".*?")?\)'
+
+    if not text:
+        return []
+    return re.findall(pattern, text)
+
+##__________Extract Markdown Links__________##
+
+def extract_markdown_links(text):
+
+    pattern = r'\[(.*?)\]\((.*?)(?:\s*".*?")?\)'
+
+    if not text: 
+        return []
+    return re.findall(pattern, text)
 
