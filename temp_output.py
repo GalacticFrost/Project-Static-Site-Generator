@@ -1,10 +1,13 @@
 import re
 
-text = "![alt text](https://example.com/image.jpg \"Image Title\")"
-text1 = "[GitHub](https://github.com \"GitHub Homepage\")"
+image = "This is text with an ![image](https://storage.googleapis.com/qvault-webapp-dynamic-assets/course_assets/zjjcJKZ.png) and another ![second image](https://storage.googleapis.com/qvault-webapp-dynamic-assets/course_assets/3elNhQu.png)"
+link = "[GitHub](https://github.com \"GitHub Homepage\")"
 
-match =  re.findall(r"!\[(.*)\]\(([^\"\s]*)\)", text)
-match1 = re.findall(r"\[(.*)\]\(([^\"\s]*)\)", text1)
+pattern = r'!\[.*?\]\(.*?\)'
 
-print (f'{match}\n')
-print(match1)
+
+split_image = re.split(pattern, image)
+
+print(split_image)
+print(split_image[2])
+print(len(split_image[2]))

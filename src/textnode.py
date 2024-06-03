@@ -86,3 +86,61 @@ def extract_markdown_links(text):
         return []
     return re.findall(pattern, text)
 
+##__________Split Markdown Image into Textnodes__________##
+
+def split_nodes_images(old_nodes):
+
+    textnode_list = []
+
+    for node in old_nodes:
+        if node.text_type == "text":
+            images_extracted = extract_markdown_images(node.text)
+
+            if not images_extracted:
+                textnode_list.append(node)
+                continue
+
+            split_text = node.text
+            for image_alt, image_url in images_extracted:
+                parts = split_text.split(f"![{image_alt}]({image_url})", 1)
+                if parts[0].strip():
+                    textnode_list.append(TextNode(parts[0], "text"))
+                textnode_list.append(TextNode(image_alt, "image", image_url))
+                split_text = parts[1] if len(parts) > 1 else ""
+            
+            if split_text.strip():
+                textnode_list.append(TextNode(split_text, "text"))
+        else:
+            textnode_list.append(node)
+    
+    return textnode_list
+
+##__________Split Markdown Link into Textnodes__________##
+
+def split_nodes_links(old_nodes):
+
+    textnode_list = []
+
+    for node in old_nodes:
+        if node.text_type == "text":
+            links_extracted = extract_markdown_links(node.text)
+
+            if not links_extracted:
+                textnode_list.append(node)
+                continue
+
+            split_text = node.text
+            for link_text, link_url in links_extracted:
+                parts = split_text.split(f"[{link_text}]({link_url})", 1)
+                if parts[0].strip():
+                    textnode_list.append(TextNode(parts[0], "text"))
+                textnode_list.append(TextNode(link_text, "link", link_url))
+                split_text = parts[1] if len(parts) > 1 else ""
+            
+            if split_text.strip():
+                textnode_list.append(TextNode(split_text, "text"))
+        else:
+            textnode_list.append(node)
+    
+    return textnode_list
+
