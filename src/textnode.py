@@ -144,3 +144,62 @@ def split_nodes_links(old_nodes):
     
     return textnode_list
 
+##__________Split Markdown Headings and Blockqoute into Textnodes__________##
+
+def split_nodes_heading_and_blockquote(text):
+    
+    heading_pattern = re.compile(r'^(\#{1,6}) (.*)$')
+    blockquote_pattern = re.compile(r'^> (.*)$')
+
+    lines = text.splitlines(keepends=True)  # keepends=True preserves newline characters
+    textnode_list = []
+    current_text = ""
+    current_type = "text"
+
+    for line in lines:
+        heading_match = heading_pattern.match(line)
+        blockquote_match = blockquote_pattern.match(line)
+
+        if heading_match:
+            if current_text:  # Add any accumulated text before switching to heading
+                textnode_list.append(TextNode(current_text, current_type))
+                current_text = ""
+            level = len(heading_match.group(1))
+            current_text = heading_match.group(2) + "\n"
+            current_type = f"heading{level}"
+            textnode_list.append(TextNode(current_text, current_type))
+            current_text = ""
+            current_type = "text"
+        elif blockquote_match:
+            if current_text and current_type != "blockquote":  # Handle text before a blockquote
+                textnode_list.append(TextNode(current_text, current_type))
+                current_text = ""
+            current_text += blockquote_match.group(1) + "\n"
+            current_type = "blockquote"
+        else:
+            if current_type == "blockquote":  # If we switch back to text from blockquote, append blockquote first
+                textnode_list.append(TextNode(current_text, current_type))
+                current_text = ""
+                current_type = "text"
+            current_text += line
+
+    if current_text:  # Append any remaining text
+        textnode_list.append(TextNode(current_text, current_type))
+
+    return textnode_list
+
+##__________Split Markdown List into Textnodes__________##
+
+# def split_nodes_lists(text):
+
+
+##__________Text into Textnodes Through Above Functions__________##
+
+def text_to_textnodes(text):
+
+    textnode_list = []
+
+
+
+
+    return textnode_list
