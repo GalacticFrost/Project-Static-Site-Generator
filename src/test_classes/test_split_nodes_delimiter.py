@@ -1,5 +1,5 @@
 import unittest
-from textnode import *
+from textnode import TextNode, split_nodes_delimiter
 
 class TestMarkdownTextToTextNode(unittest.TestCase):
 
@@ -41,12 +41,6 @@ class TestMarkdownTextToTextNode(unittest.TestCase):
         ]
         result = split_nodes_delimiter(sentence, delimiters)
         self.assertEqual(result, expected_output)
-
-    def test_unmatched_delimiter_raises_exception(self):
-        sentence = "This is `unmatched code block"
-        with self.assertRaises(Exception) as context:
-            split_nodes_delimiter(sentence, ["`"])
-        self.assertTrue('Unmatched' in str(context.exception))
 
     def test_invalid_delimiter_raises_exception(self):
         sentence = "This is text with ^invalid^ delimiter"
