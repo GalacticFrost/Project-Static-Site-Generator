@@ -1,44 +1,27 @@
 from textnode import *
 
-sentence = '''This is **text** with an *italic* word and a `code block` and an 
-    ![image](https://storage.googleapis.com/qvault-webapp-dynamic-assets/course_assets/zjjcJKZ.png) 
-    and a [link](https://boot.dev)'''
+text = '''# This is a heading
+This is a paragraph of text. It has some **bold** and *italic* words inside of it.
+* This is a list item
+* This is another list item'''
 
-test_output = '''[
-    TextNode("This is ", 'text'),
-    TextNode("text", 'bold'),
-    TextNode(" with an ", 'text'),
-    TextNode("italic", 'italic'),
-    TextNode(" word and a ", 'text'),
-    TextNode("code block", 'code'),
-    TextNode(" and an ", 'text'),
-    TextNode("image", 'image', "https://storage.googleapis.com/qvault-webapp-dynamic-assets/course_assets/zjjcJKZ.png"),
-    TextNode(" and a ", 'text'),
-    TextNode("link", 'link', "https://boot.dev"),
-]'''
+text1 =  '''This is a code block:
+```
 
+code code
+code code
 
-delim_split = split_nodes_delimiter(sentence,['`', '*', '**'])
+```
+This is a comment'''
 
-# print(f'A: {delim_split}\n')
+text_split = text.split('\n')
+text1_split = text1.split(' ')
 
-image_split = split_nodes_images([delim_split[-1]])
+print(text.replace('\n', '|\n'))
+print('\n')
+print(text_split)
+print('\n')
+print(text1.replace('\n', '|\n'))
+print(text1_split)
 
-# print(f'B: {image_split}\n')
-
-link_split = split_nodes_links([image_split[-1]])
-
-# print(f'C: {link_split}\n')
-
-list = []
-
-# print(f'{delim_split[:len(delim_split)-1]}\n')
-# print(f'{image_split[:len(image_split)-1]}\n')
-
-list.extend(delim_split[:len(delim_split)-1])
-list.extend(image_split[:len(image_split)-1])
-list.extend(link_split)
-
-print(f'{list}\n')
-print(test_output)
-# print(list == test_output)
+combined = ['This is a code block:', '```code code code code```', 'This is a comment']

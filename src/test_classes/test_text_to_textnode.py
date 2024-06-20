@@ -1,12 +1,12 @@
 import unittest
-from textnode import *
+from textnode import TextNode, text_to_textnodes
 
 class TestTextToTextNodes(unittest.TestCase):
 
     def test_blockquote_markdown(self):
         text = "> This is a blockquote"
         expected = [
-            TextNode("This is a blockquote", 'blockquote')
+            TextNode("This is a blockquote", 'quote')
         ]
         result = text_to_textnodes(text)
         self.assertEqual(result, expected)
@@ -40,9 +40,9 @@ class TestTextToTextNodes(unittest.TestCase):
     def test_heading_markdowns(self):
         text = "# Heading 1\n## Heading 2\n### Heading 3"
         expected = [
-        TextNode("Heading 1", "heading1", None),
-        TextNode("Heading 2", "heading2", None),
-        TextNode("Heading 3", "heading3", None)
+            TextNode("Heading 1", "heading1"),
+            TextNode("Heading 2", "heading2"),
+            TextNode("Heading 3", "heading3")
         ]
         result = text_to_textnodes(text)
         self.assertEqual(result, expected)
@@ -143,7 +143,7 @@ class TestTextToTextNodes(unittest.TestCase):
             TextNode("!", 'text')
         ]
         result = text_to_textnodes(text)
-        self.assertEqual(result, expected, "The link node split function did not handle multiple links correctly.")
+        self.assertEqual(result, expected)
 
     def test_multiple_images(self):
         text = "Here are multiple ![first image](https://example.com/first.png) and ![second image](https://example.com/second.png)."
@@ -155,7 +155,7 @@ class TestTextToTextNodes(unittest.TestCase):
             TextNode(".", 'text')
         ]
         result = text_to_textnodes(text)
-        self.assertEqual(result, expected, "The image node split function did not handle multiple images correctly.")
+        self.assertEqual(result, expected)
 
     def test_multiple_markdown_types_with_text(self):
         text = "Sample **bold text**, *italic text*, `code` and [link](https://example.com)."
@@ -227,7 +227,7 @@ class TestTextToTextNodes(unittest.TestCase):
             TextNode(" with text.", 'text')
         ]
         result = text_to_textnodes(text)
-        self.assertEqual(result, expected, "The link node split function did not produce the expected result with surrounding text.")
+        self.assertEqual(result, expected)
 
     def test_split_text_to_image_nodes_with_text(self):
         text = "Here is an ![image](https://storage.googleapis.com/qvault-webapp-dynamic-assets/course_assets/zjjcJKZ.png) in the middle."
@@ -237,7 +237,7 @@ class TestTextToTextNodes(unittest.TestCase):
             TextNode(" in the middle.", 'text')
         ]
         result = text_to_textnodes(text)
-        self.assertEqual(result, expected, "The image node split function did not produce the expected result with surrounding text.")
+        self.assertEqual(result, expected)
 
 if __name__ == '__main__':
     unittest.main()

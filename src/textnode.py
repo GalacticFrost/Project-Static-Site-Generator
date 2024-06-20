@@ -21,53 +21,84 @@ class TextNode:
 ##__________Split Markdown Delimiters into Textnodes__________##
 
 def split_nodes_delimiter(sentence, delimiters):
-    valid_delim = {
-        '`': 'code',
-        '*': 'italic',
-        '**': 'bold'
-    }
 
-    # Adjust the regex pattern to properly split the sentence
-    pattern = r'(\\.|`|\*\*|\*)'
-    parts = re.split(pattern, sentence)
-    textnode_list = []
-    current_text = ""
-    current_type = "text"
-    stack = []
+    # If the sentence is empty, return an empty list
+    if not sentence:
+        return []
 
-    for part in parts:
-        if part == '':  # Skip empty parts
-            continue
+    # Define valid markdown delimiters
+    valid_delimiters = {"`", "*", "**", "_"}
 
-        if part.startswith('\\'):  # Handle escaped characters
-            current_text += part[1]
-            continue
+    # Sort delimiters by length in descending order to avoid partial matches
+    delimiters = sorted(delimiters, key=len, reverse=True)
+    
+    # Check if each provided delimiter is valid
+    for delimiter in delimiters:
+        if delimiter not in valid_delimiters:
+            raise Exception(f"Delimiter '{delimiter}' is not a valid markdown syntax")
 
-        if part in delimiters:  # Check for valid delimiters
-            if stack and stack[-1] == part:
-                if current_text:
-                    textnode_list.append(TextNode(current_text, current_type))
-                    current_text = ""
-                stack.pop()
-                current_type = "text" if not stack else valid_delim[stack[-1]]
-            else:
-                if current_text:
-                    textnode_list.append(TextNode(current_text, current_type))
-                    current_text = ""
-                stack.append(part)
-                current_type = valid_delim[part]
+    # Process escaped delimiters first
+    escaped_delimiters = [re.escape(d) for d in delimiters]
+    escape_pattern = re.compile(r'\\(' + '|'.join(escaped_delimiters) + ')')
+
+    def replace_escaped(match):
+        return match.group(0)  # Keep the escape sequence intact for now
+
+    escaped_sentence = escape_pattern.sub(replace_escaped, sentence)
+
+    # Escape delimiters for regex and create a regex pattern to match any of the delimiters
+    pattern = '|'.join([f'({re.escape(d)}.*?{re.escape(d)})' for d in delimiters])
+
+    # Initialize variables
+    nodes = []
+    last_pos = 0
+    pos = 0
+
+    # Helper function to add a text node
+    def add_text_node(start, end, node_type):
+        if start < end:
+            text = sentence[start:end]
+            nodes.append(TextNode(text, node_type))
+
+    # Process the sentence to split it into nodes based on the delimiters
+    while pos < len(escaped_sentence):
+        match = re.search(pattern, escaped_sentence[pos:])
+        if match:
+            start, end = match.span()
+            start += pos
+            end += pos
+            delimiter = next((d for d in delimiters if escaped_sentence[start:start+len(d)] == d), None)
+            if delimiter:
+                add_text_node(last_pos, start, "text")  # Add preceding text as a text node
+                inner_text = sentence[start+len(delimiter):end-len(delimiter)]
+                # Determine the node type based on the delimiter
+                node_type = {
+                    "`": "code",
+                    "*": "italic" if delimiter in ("*", "_") else "bold",
+                    "**": "bold",
+                    "_": "italic"
+                }.get(delimiter, "unknown")
+                nodes.append(TextNode(inner_text, node_type))  # Add the inner text as a formatted node
+                last_pos = end
+            pos = end
         else:
-            current_text += part + " "  # Preserve white space
+            break
 
-    # Handle any remaining unmatched delimiters as text
-    while stack:
-        current_text = stack.pop() + current_text
-        current_type = "text"
+    # Add any remaining text after the last match as a text node
+    if last_pos < len(sentence):
+        add_text_node(last_pos, len(sentence), "text")
 
-    if current_text:
-        textnode_list.append(TextNode(current_text.strip(), current_type))
-
-    return textnode_list
+    # Re-insert escaped delimiters back into the nodes
+    new_nodes = []
+    for node in nodes:
+        parts = escape_pattern.split(node.text)
+        for part in parts:
+            if escape_pattern.match(part):
+                new_nodes.append(TextNode(part, "text"))
+            else:
+                new_nodes.append(TextNode(part, node.text_type))
+    
+    return new_nodes
 
 ##__________Extract Markdown Images - Helper Function__________##
 
@@ -92,99 +123,187 @@ def extract_markdown_links(text):
 ##__________Split Markdown Image into Textnodes__________##
 
 def split_nodes_images(old_nodes):
-
+    # Initialize an empty list to hold the processed text and image nodes
     textnode_list = []
 
+    # Iterate over each node in the old_nodes list
     for node in old_nodes:
+        # Check if the current node is of type "text"
         if node.text_type == "text":
+            # Extract all markdown images from the text of the current node
             images_extracted = extract_markdown_images(node.text)
 
+            # If no images are found in the text, add the entire node to the textnode_list
             if not images_extracted:
                 textnode_list.append(node)
                 continue
 
+            # Initialize split_text with the entire text of the current node
             split_text = node.text
+
+            # Iterate over each extracted image (tuple of alt text and URL)
             for image_alt, image_url in images_extracted:
+                # Split the text at the first occurrence of the markdown image
                 parts = split_text.split(f"![{image_alt}]({image_url})", 1)
-                if parts[0].strip():
+                
+                # If the text before the image is not empty, create a new text node and add it to the list
+                if parts[0]:
                     textnode_list.append(TextNode(parts[0], "text"))
+                
+                # Create a new image node with the alt text and URL, and add it to the list
                 textnode_list.append(TextNode(image_alt, "image", image_url))
+                
+                # Update split_text to the remaining part after the first image
                 split_text = parts[1] if len(parts) > 1 else ""
             
-            if split_text.strip():
+            # If there is any remaining text after the last image, create a new text node and add it to the list
+            if split_text:
                 textnode_list.append(TextNode(split_text, "text"))
         else:
+            # If the current node is not of type "text", add it directly to the textnode_list
             textnode_list.append(node)
     
+    # Return the list of processed text and image nodes
     return textnode_list
 
 ##__________Split Markdown Link into Textnodes__________##
 
 def split_nodes_links(old_nodes):
-
+    # Initialize an empty list to hold the processed text and link nodes
     textnode_list = []
 
+    # Iterate over each node in the old_nodes list
     for node in old_nodes:
+        # Check if the current node is of type "text"
         if node.text_type == "text":
+            # Extract all markdown links from the text of the current node
             links_extracted = extract_markdown_links(node.text)
 
+            # If no links are found in the text, add the entire node to the textnode_list
             if not links_extracted:
                 textnode_list.append(node)
                 continue
 
+            # Initialize split_text with the entire text of the current node
             split_text = node.text
+
+            # Iterate over each extracted link (tuple of link text and URL)
             for link_text, link_url in links_extracted:
+                # Split the text at the first occurrence of the markdown link
                 parts = split_text.split(f"[{link_text}]({link_url})", 1)
-                if parts[0].strip():
+                
+                # If the text before the link is not empty, create a new text node and add it to the list
+                if parts[0]:
                     textnode_list.append(TextNode(parts[0], "text"))
+                
+                # Create a new link node with the link text and URL, and add it to the list
                 textnode_list.append(TextNode(link_text, "link", link_url))
+                
+                # Update split_text to the remaining part after the first link
                 split_text = parts[1] if len(parts) > 1 else ""
             
-            if split_text.strip():
+            # If there is any remaining text after the last link, create a new text node and add it to the list
+            if split_text:
                 textnode_list.append(TextNode(split_text, "text"))
         else:
+            # If the current node is not of type "text", add it directly to the textnode_list
             textnode_list.append(node)
     
+    # Return the list of processed text and link nodes
     return textnode_list
 
-##__________Split Markdown Headings and Blockqoute into Textnodes__________##
+##__________Split Markdown Heading into Textnodes__________##
 
-def split_nodes_heading_and_blockquote(text):
-    
+def split_nodes_heading(text):
+
+    # Regular expression pattern to match markdown-style headings (e.g., ## Heading)
     heading_pattern = re.compile(r'^(#{1,6})\s(.*)$')
-    blockquote_pattern = re.compile(r'^> (.*)$')
 
-    lines = text.splitlines(keepends=True)  # keepends=True preserves newline characters
+    # Split the input text into lines while keeping line endings intact
+    lines = text.splitlines(keepends=True)
+    
+    # Initialize an empty list to hold the processed text and heading nodes
     textnode_list = []
+    
+    # Initialize variables to accumulate text and determine its type
     current_text = ""
     current_type = "text"
 
+    # Iterate over each line in the lines list
     for line in lines:
+        # Attempt to match the current line against the heading pattern
         heading_match = heading_pattern.match(line)
-        blockquote_match = blockquote_pattern.match(line)
 
         if heading_match:
-            if current_text:  # Add any accumulated text before switching to heading
-                textnode_list.append(TextNode(current_text.strip(), current_type))
-                current_text = ""
+            # If the line matches the heading pattern
+            if current_text:
+                # Append the accumulated text as a text node if there is any
+                textnode_list.append(TextNode(current_text, current_type))
+            
+            # Determine the level of the heading (number of '#' characters)
             level = len(heading_match.group(1))
-            current_text = heading_match.group(2) + "\n"
-            current_type = f"heading{level}"
-        elif blockquote_match:
-            if current_text and current_type != "blockquote":  # Handle text before a blockquote
-                textnode_list.append(TextNode(current_text.strip(), current_type))
-                current_text = ""
-            current_text += blockquote_match.group(1) + "\n"
-            current_type = "blockquote"
+            
+            # Add the matched heading text as a heading node with appropriate level
+            textnode_list.append(TextNode(heading_match.group(2), f"heading{level}"))
+            
+            # Reset current_text and current_type for new accumulation
+            current_text = ""
+            current_type = "text"
         else:
-            if current_type == "blockquote":  # If we switch back to text from blockquote, append blockquote first
-                textnode_list.append(TextNode(current_text.strip(), current_type))
-                current_text = ""
-                current_type = "text"
+            # If the line does not match the heading pattern, accumulate it into current_text
             current_text += line
 
-    if current_text:  # Append any remaining text
-        textnode_list.append(TextNode(current_text.strip(), current_type))
+    # Append any remaining accumulated text as a text node at the end
+    if current_text:
+        textnode_list.append(TextNode(current_text, current_type))
+
+    # Return the list of processed text and heading nodes
+    return textnode_list
+
+##__________Split Markdown Blockqoute into Textnodes__________##
+
+def split_nodes_blockquote(text_nodes):
+
+    # Regular expression pattern to match blockquotes (lines starting with "> ")
+    blockquote_pattern = re.compile(r'^> (.*)$')
+    
+    # List to hold the resulting TextNode objects
+    textnode_list = []
+    
+    # Variables to accumulate text and track the current type ("text" or "quote")
+    current_text = ""
+    current_type = "text"
+
+    # Iterate through each TextNode object in text_nodes
+    for node in text_nodes:
+        # Split the text of the current node into lines
+        lines = node.text.splitlines()
+        
+        # Iterate through each line of the current node's text
+        for line in lines:
+            # Check if the line matches the blockquote pattern
+            blockquote_match = blockquote_pattern.match(line)
+            
+            if blockquote_match:
+                # If the line matches the blockquote pattern
+                if current_text:
+                    # If there's accumulated text, create a TextNode for it
+                    textnode_list.append(TextNode(current_text, current_type))
+                    current_text = ""  # Reset accumulated text
+                # Create a new TextNode for the blockquote line
+                textnode_list.append(TextNode(blockquote_match.group(1), "quote"))
+                current_type = "quote"  # Update current type to "quote"
+            else:
+                # If the line does not match the blockquote pattern (normal text)
+                if current_text:
+                    current_text += "\n" + line  # Accumulate with newline
+                else:
+                    current_text = line  # Start accumulating text
+                current_type = "text"  # Update current type to "text"
+
+    # After processing all lines, append any remaining accumulated text
+    if current_text:
+        textnode_list.append(TextNode(current_text, current_type))
 
     return textnode_list
 
@@ -209,95 +328,101 @@ def flatten_list (list):
     
     return flat_list
 
-##__________Process Nested Segments - Helper Function__________##
-
-def process_segment(segment):
-    
-    patterns = [
-        r'(!\[.*?\]\(.*?\))',  # Images
-        r'(\[.*?\]\(.*?\))',   # Links
-        r'(\*\*.*?\*\*)',      # Bold
-        r'(\*.*?\*)',          # Italics
-        r'(`.*?`)'             # Code
-    ]
-    
-    if not segment:
-        return []
-
-    temp_list = []
-
-    for pattern in patterns:
-        if re.search(pattern, segment):
-            segs = re.split(pattern, segment)
-            for seg in segs:
-                if re.match(pattern, seg):
-                    if pattern == patterns[0]:  # Image
-                        temp_list.extend(split_nodes_images([TextNode(seg, 'text')]))
-                    elif pattern == patterns[1]:  # Link
-                        temp_list.extend(split_nodes_links([TextNode(seg, 'text')]))
-                    elif pattern == patterns[2]:  # Bold
-                        bold_text = seg[2:-2]  # Remove '**'
-                        nested_segments = process_segment(bold_text)
-                        for nested_segment in nested_segments:
-                            if nested_segment.text_type == 'text':
-                                temp_list.append(TextNode(nested_segment.text, 'bold'))
-                            else:
-                                temp_list.append(nested_segment)
-                    elif pattern == patterns[3]:  # Italics
-                        italic_text = seg[1:-1]  # Remove '*'
-                        nested_segments = process_segment(italic_text)
-                        for nested_segment in nested_segments:
-                            if nested_segment.text_type == 'text':
-                                temp_list.append(TextNode(nested_segment.text, 'italic'))
-                            else:
-                                temp_list.append(nested_segment)
-                    elif pattern == patterns[4]:  # Code
-                        code_text = seg[1:-1]  # Remove '`'
-                        temp_list.append(TextNode(code_text, 'code'))
-                elif seg:
-                    temp_list.append(TextNode(seg, 'text'))  # Append text segment directly
-            break
-    else:
-        if segment.startswith('>'):  # Blockquote
-            temp_list.append(TextNode(segment[2:], 'blockquote'))
-        else:
-            temp_list.append(TextNode(segment, 'text'))  # Handle unformatted text
-
-    return temp_list
 
 
-##__________Text into Textnodes Through Above Functions__________##
+
+
 
 def text_to_textnodes(text):
 
-    pattern = r'(\[.*?\]\(.*?\)|!\[.*?\]\(.*?\)|\*\*.*?\*\*|\*.*?\*|`.*?`)'
+    # Check if input is already a list of TextNode objects
+    if isinstance(text, list) and all(isinstance(item, TextNode) for item in text):
+        return text
+
+    # Ensure text is a string
+    if not isinstance(text, str):
+        raise TypeError("Input must be a string or a list of TextNode objects")
+
+    # Split text into initial nodes based on markdown delimiters
+    initial_nodes = split_nodes_delimiter(text, ["`", "*", "**"])
+
+    # Initialize an empty list to collect processed nodes
+    nodes = []
+
+    # Process each initial node one by one
+    for node in initial_nodes:
+        # Split nodes further based on images
+        nodes_images = split_nodes_images([node])
+        
+        # Process each image node
+        for node_images in nodes_images:
+            # Split nodes further based on links
+            nodes_links = split_nodes_links([node_images])
+            
+            # Process each link node
+            for node_links in nodes_links:
+                # Handle headings and blockquotes for text nodes
+                if node_links.text_type == "text":
+                    nodes_headings = split_nodes_heading(node_links.text)
+                    for node_headings in nodes_headings:
+                        nodes_blockquote = split_nodes_blockquote([node_headings])
+                        nodes.extend(nodes_blockquote)
+                else:
+                    nodes.extend([node_links])
+
+    # Flatten the list of nodes
+    nodes = flatten_list(nodes)
+
+    return nodes
+
+
+
+
+##__________Split Markdown into Block__________##
+
+def markdown_to_blocks(markdown_document):
+
+    raw_text_blocks = markdown_document.split('\n')
+    final_text_blocks = []
+    temp_block = []
+
+    for line in raw_text_blocks:
+        new_line =  line.strip()
+        if new_line:  # Non-empty line (with whitespace stripped out)
+            temp_block.append(new_line)
+        else:
+            if temp_block:  # If there's anything in temp_block
+                final_text_blocks.append("\n".join(temp_block).strip())
+                temp_block = []
     
-    # Split the raw input into basic blocks, like headings and blockquotes
-    heading_split_list = split_nodes_heading_and_blockquote(text)
-
-    result_list = []
-
-    for head_list_textnode in heading_split_list:
-        head_text = head_list_textnode.text
-
-        # First, split based on the main pattern to identify segments
-        segments = re.split(pattern, head_text)
-        temp_list = []
-
-        for segment in segments:
-            # Skip empty segments
-            if not segment:
-                continue
-
-            # Handle nested segments using process_segment function
-            if re.match(pattern, segment):
-                temp_list.extend(process_segment(segment))
-            else:
-                temp_list.append(TextNode(segment, head_list_textnode.text_type))
-
-        # Extend the result list with the processed segments
-        result_list.extend(temp_list)
+    # Add any remaining temp_block as a last block if it exists
+    if temp_block:
+        final_text_blocks.append("\n".join(temp_block).strip())
     
-    # Flatten the list before returning it
-    return flatten_list(result_list)
+    return final_text_blocks
 
+##__________Identify the Block Type__________##
+
+def block_to_block_type(block):
+
+    heading_pattern = re.compile(r'^(#{1,6})\s(.*)$', re.MULTILINE)
+    blockquote_pattern = re.compile(r'^> (.*)$', re.MULTILINE)
+    code_block_pattern = re.compile(r'^```[\s\S]*?```$', re.MULTILINE)
+    unordered_list_pattern = re.compile(r'^( *[\*\-] .+)$', re.MULTILINE)
+    ordered_list_pattern = re.compile(r'^( *\d+(\.\d+)*\. .+)$', re.MULTILINE)
+
+    if not isinstance(block, str):
+        raise TypeError("Input must be a string")
+
+    if heading_pattern.match(block):
+        return 'heading'
+    if blockquote_pattern.match(block):
+        return 'quote'
+    if code_block_pattern.match(block):
+        return 'code'
+    if unordered_list_pattern.match(block):
+        return 'ulist'
+    if ordered_list_pattern.match(block):
+        return 'olist'
+    
+    return 'paragraph'
