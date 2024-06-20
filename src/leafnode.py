@@ -36,21 +36,3 @@ class LeafNode(HTMLNode):
 
         # General case for all other tags
         return f'<{self.tag}{props_str}>{self.value}</{self.tag}>'
-
-        ## OLD CODE - Before Boots assisted optimization.
-
-        # if (self.tag[0] == 'h' and len(self.tag) == 2) or (self.tag == 'p') or (self.tag == 'b') or (self.tag == 'i') or (self.tag == 'code'):
-        #     return f'<{self.tag}>{self.value}</{self.tag}>'
-        
-        # if self.tag == 'a':
-        #     if len(self.props) != 1:
-        #         raise Exception('Assigned tag doesn\'t match provided props')
-        #     return f'<{self.tag}{self.props_to_html()}>{self.value}</{self.tag}>'
-        
-        # if self.tag == 'img':
-        #     return f'<{self.tag}{self.props_to_html()}>'
-        
-        # if self.tag == 'blockquote':
-        #     return f'<{self.tag}>\n   {self.value}\n</{self.tag}>'
-        
-        # raise Exception('Invalid tag provided, check your spelling!')
